@@ -62,13 +62,16 @@ function loadCanvas() {
 
 function loadImage() {
     // clear canvas here
-    canvasContext.clearRect (0, 0, 600, 800);
+    canvasContext.clearRect (0, 0, canvas.width, canvas.height);
 
     var image_url = $('#load-image').val();
     var cat = new Image();
 
     cat.onload = function() {
         console.log(cat);
+        canvas.height = cat.height - (cat.height % 100);
+        canvas.width = cat.width - (cat.width % 100);
+
         canvasContext.drawImage(cat, 0, 0);
         var dataURL = canvas.toDataURL(); 
         var newImage = new Image();
@@ -105,7 +108,6 @@ function basicNoteClick(audioContext, freq, globalGain, gains, filterFreq) {
     var squareVCA = audioContext.createGain();
     squareVCA.gain.value = gains[2];
 
-
     var globalVCA = audioContext.createGain();
     globalVCA.gain.value = globalGain;
 
@@ -131,13 +133,14 @@ function basicNoteClick(audioContext, freq, globalGain, gains, filterFreq) {
 }
 
 function mosaic(blockSize) {
-    console.log("About to mosaic");
-    // hard coding width and height, for now
-    w = 600;
-    h = 800;
+    w = canvas.width;
+    h = canvas.height;
+    blockSize = parseInt($('#mosaic-size').val());
+
+    xBlockCount = parseInt(w / blockSize);
+    yBlockCount = parseInt(h / blockSize);
 
     halfBlock = parseInt(blockSize / 2);
-
     for (var y = 0; y < h; y+= blockSize) {
         for (var x = 0; x < w; x+= blockSize) {
             xRef = x + halfBlock;
@@ -158,8 +161,6 @@ function mosaic(blockSize) {
         console.log(clickX, clickY);
         // get colour data
         var data = canvasContext.getImageData(clickX, clickY, clickX + 1, clickY + 1).data;
- 
-        // Super basic mapping
         red = data[0];
         green = data[1];
         blue = data[2];
@@ -172,10 +173,12 @@ function mosaic(blockSize) {
         freq = noteFreqs[note] * octave;
         gains = [red / 255, green / 384, blue / 512];
 
-        xIndex = parseInt(clickX / 100);
-        yIndex = parseInt(clickY / 100);
-        console.log(xIndex, yIndex);
-        filterFreq = (xIndex + 8 - yIndex) * 200;
+        xIndex = parseInt(clickX / blockSize) + 1;
+        yIndex = parseInt(clickY / blockSize) + 1;
+        filterIncrement = 6000 / (yBlockCount + xBlockCount);
+        filterFreq = (xIndex + (yBlockCount - yIndex)) * filterIncrement;
+
+        console.log(xIndex, yBlockCount - yIndex, filterIncrement)
 
         basicNoteClick(audioContext, freq, globalGain, gains, filterFreq);
     });
@@ -186,22 +189,18 @@ $(document).ready(function(){
     // create and load canvas
     audioContext = new webkitAudioContext();
     loadCanvas();
-   
 });
 
 </script>
 
-
-
 <input type="text" id="load-image" value="Enter an image URL"/>
 <input type="button" onclick="loadImage();" value="Load Image"/>
-<input type="button" onclick="mosaic(100);" value="Mosaic"/>
+<br />
+<input type="text" id="mosaic-size" value="100"/>
+<input type="button" onclick="mosaic();" value="Mosaic"/>
 <div id="canvas-div">
     <canvas id="splash-canvas" width="600" height="800"></canvas>
 </div>
 
-
-
 </body>
-
 </html>
