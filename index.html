@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Gridsynth:  Automatic Instruments</title>
+    <title>Grid:  Automatic Instruments</title>
 </head>
 
 <body>
@@ -84,19 +84,50 @@ function loadImage() {
     cat.src = image_url;
 }
 
-function basicNoteClick(audioContext, freq, gain) {
-    console.log(freq);
+function basicNoteClick(audioContext, freq, globalGain, gains, filterFreq) {
+    console.log(freq, globalGain, gains, filterFreq);
 
-    var oscillator = audioContext.createOscillator(); // Oscillator defaults to sine wave
-    oscillator.type = 1; // square wave
-    oscillator.frequency.value = freq;
-    var vca = audioContext.createGain();
-    vca.gain.value = 0;
-    oscillator.connect(vca);
-    vca.connect(audioContext.destination)
-    oscillator.start(0);
-    vca.gain.value = gain;
-    setTimeout(function(){vca.gain.value = 0; vca.disconnect(); oscillator.disconnect()}, 500);
+    var sineOsc = audioContext.createOscillator();
+    sineOsc.type = 0; // sine wave
+    sineOsc.frequency.value = freq;
+    var sineVCA = audioContext.createGain();
+    sineVCA.gain.value = gains[0];
+
+    var triOsc = audioContext.createOscillator();
+    triOsc.type = 3; // trinagle wave
+    triOsc.frequency.value = freq;
+    var triVCA = audioContext.createGain();
+    triVCA.gain.value = gains[1];
+
+    var squareOsc = audioContext.createOscillator();
+    squareOsc.type = 1; // square wave
+    squareOsc.frequency.value = freq;
+    var squareVCA = audioContext.createGain();
+    squareVCA.gain.value = gains[2];
+
+
+    var globalVCA = audioContext.createGain();
+    globalVCA.gain.value = globalGain;
+
+    sineOsc.connect(sineVCA);
+    triOsc.connect(triVCA);
+    squareOsc.connect(squareVCA);
+    sineVCA.connect(globalVCA);
+    triVCA.connect(globalVCA);
+    squareVCA.connect(globalVCA);
+
+    var globalFilter = audioContext.createBiquadFilter();
+    globalFilter.type = 0; // Low-pass filter
+    globalFilter.frequency.value = filterFreq;
+
+    globalVCA.connect(globalFilter);
+    globalFilter.connect(audioContext.destination);
+
+    sineOsc.start(0);
+    triOsc.start(0);
+    squareOsc.start(0);
+    
+    setTimeout(function(){globalVCA.gain.value = 0; globalVCA.disconnect(); sineOsc.disconnect(); triOsc.disconnect(); squareOsc.disconnect();}, 500);
 }
 
 function mosaic(blockSize) {
@@ -133,16 +164,20 @@ function mosaic(blockSize) {
         green = data[1];
         blue = data[2];
 
-        // stupid mapping
-        // var freq = (red + green + blue) * 1.5;
-
         // Less stupid mapping, via McFee
         var res = rgb2hsv(red, green, blue);
         note = parseInt(res[0] / 30);
         octave = parseInt(res[2] * 6);
+        globalGain = res[1];
         freq = noteFreqs[note] * octave;
+        gains = [red / 255, green / 384, blue / 512];
 
-        basicNoteClick(audioContext, freq, 1.0)
+        xIndex = parseInt(clickX / 100);
+        yIndex = parseInt(clickY / 100);
+        console.log(xIndex, yIndex);
+        filterFreq = (xIndex + 8 - yIndex) * 200;
+
+        basicNoteClick(audioContext, freq, globalGain, gains, filterFreq);
     });
 
 }
