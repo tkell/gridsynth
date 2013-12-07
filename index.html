@@ -11,23 +11,55 @@
 <script src="jquery-1.10.2.min.js"></script>
 <script type="text/javascript">
 
-var the_image = "balloons.jpg";
+// from http://stackoverflow.com/questions/1985260/javascript-array-rotate
+Array.prototype.rotate = (function() {
+    // save references to array functions to make lookup faster
+    var push = Array.prototype.push,
+        splice = Array.prototype.splice;
+
+    return function(count) {
+        var len = this.length >>> 0, // convert to uint
+            count = count >> 0; // convert to int
+
+        // convert count to value in range [0, len[
+        count = ((count % len) + len) % len;
+
+        // use splice.call() instead of this.splice() to make function generic
+        push.apply(this, splice.call(this, 0, count));
+        return this;
+    };
+})();
+
 var canvas;
 var canvasContext;
 var audioContext;
 
+function getKey(hue) {
+    return parseInt(hue / 30);
+}
 
-function getFreq(hue) {
-    var chromaNoteFreqs = [65.41, 69.30, 73.42, 77.78, 82.41, 87.31, 92.50, 98.00, 103.83, 110.00, 116.54, 123.47];
-    
-    // both of these are c.  
-    
-    var octaNoteFreqs = [65.41, 73.42, 77.78, 87.31, 92.50, 103.83, 110.00, 123.47];
-    var pentaNoteFreqs = [65.41, 73.42, 82.41, 98.00, 110.00];
-
+function getFreq(hue, key) {
     // hue is 0 - 360
+    var chromaNoteFreqs = [65.41, 69.30, 73.42, 77.78, 82.41, 87.31, 92.50, 98.00, 103.83, 110.00, 116.54, 123.47];
+    chromaNoteFreqs = chromaNoteFreqs.rotate(key);
+   
+    var octaNoteFreqs = [chromaNoteFreqs[0],
+                          chromaNoteFreqs[2],
+                          chromaNoteFreqs[3],
+                          chromaNoteFreqs[5],                         
+                          chromaNoteFreqs[6],
+                          chromaNoteFreqs[8],
+                          chromaNoteFreqs[9],
+                          chromaNoteFreqs[11]
+                        ];
+    var pentaNoteFreqs = [chromaNoteFreqs[0], 
+                          chromaNoteFreqs[2], 
+                          chromaNoteFreqs[4], 
+                          chromaNoteFreqs[7],
+                          chromaNoteFreqs[9]
+                        ];
+    
     scale = $('#scale-type').val();
-
     if (scale == 'chromatic') {
         return chromaNoteFreqs[parseInt(hue / 30)];
     }
@@ -162,6 +194,10 @@ function mosaic(blockSize) {
     xBlockCount = parseInt(w / blockSize);
     yBlockCount = parseInt(h / blockSize);
 
+    var globalRed = 0;
+    var globalGreen = 0;
+    var globalBlue = 0;
+
     halfBlock = parseInt(blockSize / 2);
     for (var y = 0; y < h; y+= blockSize) {
         for (var x = 0; x < w; x+= blockSize) {
@@ -169,10 +205,23 @@ function mosaic(blockSize) {
             yRef = y + halfBlock;
 
             var data = canvasContext.getImageData(xRef, yRef, xRef + 1, yRef).data;
+
+            globalRed = globalRed + data[0];
+            globalGreen = globalGreen + data[1];
+            globalBlue = globalBlue + data[2];
+
             canvasContext.fillStyle = "rgb(" + data[0] + "," + data[1] + "," + data[2] + ")";
             canvasContext.fillRect(x, y, blockSize, blockSize);
         }
     }
+
+    var totalBlocks = xBlockCount * yBlockCount;
+    globalRed = parseInt(globalRed / totalBlocks);
+    globalGreen = parseInt(globalGreen / totalBlocks);
+    globalBlue = parseInt(globalBlue / totalBlocks);
+
+    var res = rgb2hsv(globalRed, globalGreen, globalBlue);
+    globalKey = getKey(res[0]);
 
     // Assign and map clicks here.
     canvas.addEventListener('click', function(event) {
@@ -187,9 +236,10 @@ function mosaic(blockSize) {
         green = data[1];
         blue = data[2];
 
+
         // Less-stupid mapping, via McFee
         var res = rgb2hsv(red, green, blue);
-        freq = getFreq(res[0]);
+        freq = getFreq(res[0], globalKey);
         octave = parseInt(res[2] * 6);
         freq = freq * octave;
 
