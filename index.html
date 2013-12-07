@@ -16,7 +16,28 @@ var canvas;
 var canvasContext;
 var audioContext;
 
-var noteFreqs = [65.41, 69.30, 73.42, 77.78, 82.41, 87.31, 92.50, 98.00, 103.83, 110.00, 116.54, 123.47];
+
+function getFreq(hue) {
+    var chromaNoteFreqs = [65.41, 69.30, 73.42, 77.78, 82.41, 87.31, 92.50, 98.00, 103.83, 110.00, 116.54, 123.47];
+    
+    // both of these are c.  
+    
+    var octaNoteFreqs = [65.41, 73.42, 77.78, 87.31, 92.50, 103.83, 110.00, 123.47];
+    var pentaNoteFreqs = [65.41, 73.42, 82.41, 98.00, 110.00];
+
+    // hue is 0 - 360
+    scale = $('#scale-type').val();
+
+    if (scale == 'chromatic') {
+        return chromaNoteFreqs[parseInt(hue / 30)];
+    }
+    if (scale == 'octatonic') {
+        return octaNoteFreqs[parseInt(hue / 45)];
+    }
+    if (scale == 'pentatonic') {
+        return pentaNoteFreqs[parseInt(hue / 72)];
+    }
+}
 
 function rgb2hsv (r,g,b) {
  var computedH = 0;
@@ -153,7 +174,7 @@ function mosaic(blockSize) {
         }
     }
 
-    // Assign clicks here.
+    // Assign and map clicks here.
     canvas.addEventListener('click', function(event) {
         elemLeft = canvas.offsetLeft;
         elemTop = canvas.offsetTop;
@@ -166,21 +187,19 @@ function mosaic(blockSize) {
         green = data[1];
         blue = data[2];
 
-        // Less stupid mapping, via McFee
+        // Less-stupid mapping, via McFee
         var res = rgb2hsv(red, green, blue);
-        note = parseInt(res[0] / 30);
+        freq = getFreq(res[0]);
         octave = parseInt(res[2] * 6);
+        freq = freq * octave;
+
         globalGain = res[1];
-        freq = noteFreqs[note] * octave;
         gains = [red / 255, green / 384, blue / 512];
 
         xIndex = parseInt(clickX / blockSize) + 1;
         yIndex = parseInt(clickY / blockSize) + 1;
         filterIncrement = 6000 / (yBlockCount + xBlockCount);
         filterFreq = (xIndex + (yBlockCount - yIndex)) * filterIncrement;
-
-        console.log(xIndex, yBlockCount - yIndex, filterIncrement)
-
         basicNoteClick(audioContext, freq, globalGain, gains, filterFreq);
 
         // Ten words about this mapping:  
@@ -212,7 +231,7 @@ $(document).ready(function(){
 <input type="text" id="mosaic-size" value="100"/>
 <input type="button" onclick="mosaic();" value="Mosaic"/> (multiples of 25 look best)
 <br />
-<input type="text" id="scale-divsion" value="12"/> (pentatonic to microtonal)
+<input type="text" id="scale-type" value="chromatic"/> (pentatonic, octatonic, chromatic)
 
 
 <div id="clear">
