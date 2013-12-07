@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Grid:  Automatic Instruments</title>
+    <title>grid:  automatic instruments</title>
+    <link href="main.css" rel="stylesheet">
 </head>
 
 <body>
@@ -181,6 +182,13 @@ function mosaic(blockSize) {
         console.log(xIndex, yBlockCount - yIndex, filterIncrement)
 
         basicNoteClick(audioContext, freq, globalGain, gains, filterFreq);
+
+        // Ten words about this mapping:  
+            // filter freq is up and to the right.  
+            // blend of sin / tri / square is the R / G / B values
+            // global gain is saturation:  white is quiet, colourful is loud
+            // pitch class is hue, which is circular, like pitch
+            // octave is brightness:  so black is low, white is high
     });
 
 }
@@ -193,13 +201,26 @@ $(document).ready(function(){
 
 </script>
 
+<div id="wrapper">
+    <div id="splash">| | grid | |</div>
+    <div id="about">automatic instrument creation via images</div>
+</div>
+
 <input type="text" id="load-image" value="Enter an image URL"/>
-<input type="button" onclick="loadImage();" value="Load Image"/>
+<input type="button" onclick="loadImage();" value="Load Image"/> (wikipedia images only, for now)
 <br />
 <input type="text" id="mosaic-size" value="100"/>
-<input type="button" onclick="mosaic();" value="Mosaic"/>
+<input type="button" onclick="mosaic();" value="Mosaic"/> (multiples of 25 look best)
+<br />
+<input type="text" id="scale-divsion" value="12"/> (pentatonic to microtonal)
+
+
+<div id="clear">
+    <br />
+</div>
+
 <div id="canvas-div">
-    <canvas id="splash-canvas" width="600" height="800"></canvas>
+    <canvas id="splash-canvas" width="10" height="10"></canvas>
 </div>
 
 </body>
