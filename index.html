@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Gridsynth:  Automatic Instruments</title>
+</head>
+
+<body>
+
+<script src="jquery-1.10.2.min.js"></script>
+<script type="text/javascript">
+
+var the_image = "balloons.jpg";
+var canvas;
+var canvasContext;
+var audioContext;
+
+function loadCanvas(image) {
+    var cat = new Image();
+    cat.src = image;
+    canvas = document.getElementById("splash-canvas");
+    canvasContext = canvas.getContext("2d");
+    cat.onload = function() {
+        canvasContext.drawImage(cat, 0, 0);  
+    };
+}
+
+function basicNoteClick(audioContext, freq, gain) {
+    console.log(freq);
+
+    var oscillator = audioContext.createOscillator(); // Oscillator defaults to sine wave
+    oscillator.frequency.value = freq;
+    var vca = audioContext.createGain();
+    vca.gain.value = 0;
+    oscillator.connect(vca);
+    vca.connect(audioContext.destination)
+    oscillator.start(0);
+    vca.gain.value = gain;
+    setTimeout(function(){vca.gain.value = 0; vca.disconnect(); oscillator.disconnect()}, 500);
+}
+
+function mosaic(blockSize) {
+    console.log("About to mosaic");
+    // hard coding width and height, for now
+    w = 600;
+    h = 800;
+
+    halfBlock = parseInt(blockSize / 2);
+
+    for (var y = 0; y < h; y+= blockSize) {
+        for (var x = 0; x < w; x+= blockSize) {
+            xRef = x + halfBlock;
+            yRef = y + halfBlock;
+
+            var data = canvasContext.getImageData(xRef, yRef, xRef + 1, yRef).data;
+            canvasContext.fillStyle = "rgb(" + data[0] + "," + data[1] + "," + data[2] + ")";
+            canvasContext.fillRect(x, y, blockSize, blockSize);
+        }
+    }
+
+    // Assign clicks here.
+    canvas.addEventListener('click', function(event) {
+        elemLeft = canvas.offsetLeft;
+        elemTop = canvas.offsetTop;
+        var clickX = event.pageX - elemLeft;
+        var clickY = event.pageY - elemTop;
+        console.log(clickX, clickY);
+        // get colour data
+        var data = canvasContext.getImageData(clickX, clickY, clickX + 1, clickY + 1).data;
+        var color = "rgb(" + data[0] + "," + data[1] + "," + data[2] + ")";
+        console.log(color);
+
+        // OKAY, NOW TO MAP
+    });
+
+}
+
+$(document).ready(function(){
+    // create and load canvas
+    audioContext = new webkitAudioContext();
+    loadCanvas(the_image);
+    
+});
+
+</script>
+
+
+<input type="button" onclick="mosaic(100);" value="Mosaic"/>
+<div id="canvas-div">
+    <canvas id="splash-canvas" width="600" height="800"></canvas>
+</div>
+
+
+
+</body>
+
+</html>
