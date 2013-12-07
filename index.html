@@ -55,14 +55,33 @@ function rgb2hsv (r,g,b) {
  return [computedH,computedS,computedV];
 }
 
-function loadCanvas(image) {
-    var cat = new Image();
-    cat.src = image;
+function loadCanvas() {
     canvas = document.getElementById("splash-canvas");
     canvasContext = canvas.getContext("2d");
+}
+
+function loadImage() {
+    // clear canvas here
+    canvasContext.clearRect (0, 0, 600, 800);
+
+    var image_url = $('#load-image').val();
+    var cat = new Image();
+
     cat.onload = function() {
-        canvasContext.drawImage(cat, 0, 0);  
+        console.log(cat);
+        canvasContext.drawImage(cat, 0, 0);
+        var dataURL = canvas.toDataURL(); 
+        var newImage = new Image();
+        newImage.onload = function() {
+            console.log(newImage);
+            canvasContext.drawImage(newImage, 0, 0);
+        }
+        newImage.crossOrigin = 'anonymous'; 
+        newImage.src = dataURL;
     };
+
+    cat.crossOrigin = 'anonymous'; 
+    cat.src = image_url;
 }
 
 function basicNoteClick(audioContext, freq, gain) {
@@ -123,8 +142,6 @@ function mosaic(blockSize) {
         octave = parseInt(res[2] * 6);
         freq = noteFreqs[note] * octave;
 
-        console.log(note, noteFreqs[note], octave, freq)
-
         basicNoteClick(audioContext, freq, 1.0)
     });
 
@@ -133,13 +150,16 @@ function mosaic(blockSize) {
 $(document).ready(function(){
     // create and load canvas
     audioContext = new webkitAudioContext();
-    loadCanvas(the_image);
-    
+    loadCanvas();
+   
 });
 
 </script>
 
 
+
+<input type="text" id="load-image" value="Enter an image URL"/>
+<input type="button" onclick="loadImage();" value="Load Image"/>
 <input type="button" onclick="mosaic(100);" value="Mosaic"/>
 <div id="canvas-div">
     <canvas id="splash-canvas" width="600" height="800"></canvas>
