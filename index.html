@@ -15,6 +15,46 @@ var canvas;
 var canvasContext;
 var audioContext;
 
+var noteFreqs = [65.41, 69.30, 73.42, 77.78, 82.41, 87.31, 92.50, 98.00, 103.83, 110.00, 116.54, 123.47];
+
+function rgb2hsv (r,g,b) {
+ var computedH = 0;
+ var computedS = 0;
+ var computedV = 0;
+
+ //remove spaces from input RGB values, convert to int
+ var r = parseInt( (''+r).replace(/\s/g,''),10 ); 
+ var g = parseInt( (''+g).replace(/\s/g,''),10 ); 
+ var b = parseInt( (''+b).replace(/\s/g,''),10 ); 
+
+ if ( r==null || g==null || b==null ||
+     isNaN(r) || isNaN(g)|| isNaN(b) ) {
+   alert ('Please enter numeric RGB values!');
+   return;
+ }
+ if (r<0 || g<0 || b<0 || r>255 || g>255 || b>255) {
+   alert ('RGB values must be in the range 0 to 255.');
+   return;
+ }
+ r=r/255; g=g/255; b=b/255;
+ var minRGB = Math.min(r,Math.min(g,b));
+ var maxRGB = Math.max(r,Math.max(g,b));
+
+ // Black-gray-white
+ if (minRGB==maxRGB) {
+  computedV = minRGB;
+  return [0,0,computedV];
+ }
+
+ // Colors other than black-gray-white:
+ var d = (r==minRGB) ? g-b : ((b==minRGB) ? r-g : b-r);
+ var h = (r==minRGB) ? 3 : ((b==minRGB) ? 1 : 5);
+ computedH = 60*(h - d/(maxRGB - minRGB));
+ computedS = (maxRGB - minRGB)/maxRGB;
+ computedV = maxRGB;
+ return [computedH,computedS,computedV];
+}
+
 function loadCanvas(image) {
     var cat = new Image();
     cat.src = image;
@@ -29,6 +69,7 @@ function basicNoteClick(audioContext, freq, gain) {
     console.log(freq);
 
     var oscillator = audioContext.createOscillator(); // Oscillator defaults to sine wave
+    oscillator.type = 1; // square wave
     oscillator.frequency.value = freq;
     var vca = audioContext.createGain();
     vca.gain.value = 0;
@@ -67,14 +108,22 @@ function mosaic(blockSize) {
         console.log(clickX, clickY);
         // get colour data
         var data = canvasContext.getImageData(clickX, clickY, clickX + 1, clickY + 1).data;
-        var color = "rgb(" + data[0] + "," + data[1] + "," + data[2] + ")";
-        console.log(color);
-
+ 
         // Super basic mapping
         red = data[0];
         green = data[1];
         blue = data[2];
-        var freq = (red + green + blue) * 1.5;
+
+        // stupid mapping
+        // var freq = (red + green + blue) * 1.5;
+
+        // Less stupid mapping, via McFee
+        var res = rgb2hsv(red, green, blue);
+        note = parseInt(res[0] / 30);
+        octave = parseInt(res[2] * 6);
+        freq = noteFreqs[note] * octave;
+
+        console.log(note, noteFreqs[note], octave, freq)
 
         basicNoteClick(audioContext, freq, 1.0)
     });
