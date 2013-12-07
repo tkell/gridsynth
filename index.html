@@ -70,7 +70,13 @@ function mosaic(blockSize) {
         var color = "rgb(" + data[0] + "," + data[1] + "," + data[2] + ")";
         console.log(color);
 
-        // OKAY, NOW TO MAP
+        // Super basic mapping
+        red = data[0];
+        green = data[1];
+        blue = data[2];
+        var freq = (red + green + blue) * 1.5;
+
+        basicNoteClick(audioContext, freq, 1.0)
     });
 
 }
