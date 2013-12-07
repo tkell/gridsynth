@@ -33,6 +33,7 @@ Array.prototype.rotate = (function() {
 var canvas;
 var canvasContext;
 var audioContext;
+var globalKey;
 
 function getKey(hue) {
     return parseInt(hue / 30);
@@ -186,7 +187,46 @@ function basicNoteClick(audioContext, freq, globalGain, gains, filterFreq) {
     setTimeout(function(){globalVCA.gain.value = 0; globalVCA.disconnect(); sineOsc.disconnect(); triOsc.disconnect(); squareOsc.disconnect();}, 500);
 }
 
-function mosaic(blockSize) {
+
+function mapClicks() {
+    $('#splash-canvas').off();
+    $('#splash-canvas').on( "click", function() {
+        var blockSize = parseInt($('#mosaic-size').val());
+        elemLeft = canvas.offsetLeft;
+        elemTop = canvas.offsetTop;
+        var clickX = event.pageX - elemLeft;
+        var clickY = event.pageY - elemTop;
+        // get colour data
+        var data = canvasContext.getImageData(clickX, clickY, clickX + 1, clickY + 1).data;
+        red = data[0];
+        green = data[1];
+        blue = data[2];
+
+        // Less-stupid mapping, via McFee
+        var res = rgb2hsv(red, green, blue);
+        freq = getFreq(res[0], globalKey);
+        octave = parseInt(res[2] * 6);
+        freq = freq * octave;
+
+        globalGain = res[1];
+        gains = [red / 255, green / 384, blue / 512];
+
+        xIndex = parseInt(clickX / blockSize) + 1;
+        yIndex = parseInt(clickY / blockSize) + 1;
+        filterIncrement = 6000 / (yBlockCount + xBlockCount);
+        filterFreq = (xIndex + (yBlockCount - yIndex)) * filterIncrement;
+        basicNoteClick(audioContext, freq, globalGain, gains, filterFreq);
+
+        // Ten words about this mapping:  
+            // filter freq is up and to the right.  
+            // Timbre:  blend of sin / tri / square is the R / G / B values
+            // global gain is saturation:  white is quiet, colourful is loud
+            // pitch class is hue, which is circular, like pitch
+            // octave is brightness:  so black is low, white is high
+    });
+}
+
+function mosaic() {
     w = canvas.width;
     h = canvas.height;
     blockSize = parseInt($('#mosaic-size').val());
@@ -222,44 +262,6 @@ function mosaic(blockSize) {
 
     var res = rgb2hsv(globalRed, globalGreen, globalBlue);
     globalKey = getKey(res[0]);
-
-    // Assign and map clicks here.
-    canvas.addEventListener('click', function(event) {
-        elemLeft = canvas.offsetLeft;
-        elemTop = canvas.offsetTop;
-        var clickX = event.pageX - elemLeft;
-        var clickY = event.pageY - elemTop;
-        console.log(clickX, clickY);
-        // get colour data
-        var data = canvasContext.getImageData(clickX, clickY, clickX + 1, clickY + 1).data;
-        red = data[0];
-        green = data[1];
-        blue = data[2];
-
-
-        // Less-stupid mapping, via McFee
-        var res = rgb2hsv(red, green, blue);
-        freq = getFreq(res[0], globalKey);
-        octave = parseInt(res[2] * 6);
-        freq = freq * octave;
-
-        globalGain = res[1];
-        gains = [red / 255, green / 384, blue / 512];
-
-        xIndex = parseInt(clickX / blockSize) + 1;
-        yIndex = parseInt(clickY / blockSize) + 1;
-        filterIncrement = 6000 / (yBlockCount + xBlockCount);
-        filterFreq = (xIndex + (yBlockCount - yIndex)) * filterIncrement;
-        basicNoteClick(audioContext, freq, globalGain, gains, filterFreq);
-
-        // Ten words about this mapping:  
-            // filter freq is up and to the right.  
-            // blend of sin / tri / square is the R / G / B values
-            // global gain is saturation:  white is quiet, colourful is loud
-            // pitch class is hue, which is circular, like pitch
-            // octave is brightness:  so black is low, white is high
-    });
-
 }
 
 $(document).ready(function(){
@@ -276,12 +278,13 @@ $(document).ready(function(){
 </div>
 
 <input type="text" id="load-image" value="Enter an image URL"/>
-<input type="button" onclick="loadImage();" value="Load Image"/> (wikipedia images only, for now)
+<input type="button" onclick="loadImage();" value="Load"/> (wikipedia images only, for now)
 <br />
 <input type="text" id="mosaic-size" value="100"/>
 <input type="button" onclick="mosaic();" value="Mosaic"/> (multiples of 25 look best)
 <br />
-<input type="text" id="scale-type" value="chromatic"/> (pentatonic, octatonic, chromatic)
+<input type="text" id="scale-type" value="chromatic"/>
+<input type="button" onclick="mapClicks();" value="Generate"/>  (pentatonic, octatonic, chromatic)
 
 
 <div id="clear">
